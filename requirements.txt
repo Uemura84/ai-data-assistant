@@ -1,0 +1,8 @@
+
+streamlit>=1.36
+pandas>=2.2
+python-dotenv>=1.0
+pydantic>=2.8
+# Add an LLM SDK later (optional)
+# openai>=1.40
+# litellm>=1.43
