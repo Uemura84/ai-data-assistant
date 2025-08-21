@@ -36,11 +36,21 @@ def render_ui():
         with st.spinner("Thinking..."):
             result = handle_question(question, df, schema)
 
+        # app/ui.py (after result)
         st.subheader("Generated Code")
         st.code(result.get("code", ""), language="python")
 
         kind = result.get("kind")
         payload = result.get("payload")
+
+        if kind == "table" and getattr(payload, "shape", (0,0))[0] >= 50:
+            st.caption("Showing first 50 rows. Refine your query for more focused results.")
+
+        if kind == "message":
+            st.info("Tip: Try queries like “average <num_col> by <cat_col>”, "
+                    "“rows where <num_col> > 100 and <cat_col> == 'A'”, "
+                    "“top 5 <group_col> by <num_col>”.")
+
         if kind == "scalar":
             st.metric(label="Answer", value=str(payload))
         elif kind == "table":
