@@ -1,10 +1,8 @@
-
-from io import BytesIO, StringIO
+from io import StringIO
 import pandas as pd
 
 def load_csv(uploaded_file) -> pd.DataFrame | None:
     try:
-        # Streamlit gives a file-like object; ensure UTF-8 by default
         data = uploaded_file.read()
         try:
             s = data.decode('utf-8')
@@ -15,7 +13,11 @@ def load_csv(uploaded_file) -> pd.DataFrame | None:
         return None
 
 def infer_schema(df: pd.DataFrame) -> dict:
-    schema = {}
-    for col, dtype in df.dtypes.items():
-        schema[col] = str(dtype)
-    return {"columns": schema, "row_count": int(len(df))}
+    cols = {col: str(dtype) for col, dtype in df.dtypes.items()}
+    use_llm = False
+    try:
+        import streamlit as st
+        use_llm = bool(st.session_state.get("use_llm", False))
+    except Exception:
+        pass
+    return {"columns": cols, "row_count": int(len(df)), "_use_llm": use_llm}

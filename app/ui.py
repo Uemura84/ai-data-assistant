@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from core.df_io import load_csv, infer_schema
@@ -6,14 +5,18 @@ from app.controller import handle_question
 
 def render_ui():
     st.title("AI Data Assistant — Week 1 MVP")
-    st.caption("Upload a CSV → ask a question → see generated code and results")
+    st.caption("Upload a CSV → ask a question → see generated code and results (rules first; optional LLM fallback)")
 
     with st.sidebar:
+        st.subheader("Settings")
+        use_llm = st.checkbox("Use LLM (fallback if rules can’t parse)", value=False)
+        st.session_state['use_llm'] = use_llm
+
         st.subheader("Sample questions")
-        st.write("- average `<numeric_col>`")
-        st.write("- sum of `<numeric_col>` by `<category_col>`")
-        st.write("- rows where `<numeric_col>` > 100 and `<category_col>` == 'A'")
-        st.write("- how many unique `<category_col>`?")
+        st.write("- average `sales` by `region`")
+        st.write("- sum of `sales` by `product`")
+        st.write("- rows where `sales` > 100 and `region` == 'A'")
+        st.write("- how many unique `product`?")
 
     uploaded = st.file_uploader("Upload CSV", type=["csv"])
     if uploaded is None:
@@ -36,25 +39,21 @@ def render_ui():
         with st.spinner("Thinking..."):
             result = handle_question(question, df, schema)
 
-        # app/ui.py (after result)
         st.subheader("Generated Code")
         st.code(result.get("code", ""), language="python")
 
+        source = result.get("source")
+        if source:
+            st.caption(f"Plan source: {source}")
+
         kind = result.get("kind")
         payload = result.get("payload")
-
-        if kind == "table" and getattr(payload, "shape", (0,0))[0] >= 50:
-            st.caption("Showing first 50 rows. Refine your query for more focused results.")
-
-        if kind == "message":
-            st.info("Tip: Try queries like “average <num_col> by <cat_col>”, "
-                    "“rows where <num_col> > 100 and <cat_col> == 'A'”, "
-                    "“top 5 <group_col> by <num_col>”.")
-
         if kind == "scalar":
             st.metric(label="Answer", value=str(payload))
         elif kind == "table":
             st.dataframe(payload, use_container_width=True)
+            if getattr(payload, "shape", (0,0))[0] >= 50:
+                st.caption("Showing first 50 rows. Refine your query for more focused results.")
         elif kind == "message":
             st.warning(payload)
         else:

@@ -1,4 +1,3 @@
-# core/executor.py
 from typing import Dict, Any, Tuple
 import pandas as pd
 from core.sanitize import sanitize_predicates
@@ -18,20 +17,19 @@ def run_plan(df: pd.DataFrame, plan: Dict[str, Any]) -> Tuple[Any, str, str]:
 
     if action == "aggregate":
         col = _require_col(plan, "column", cols)
-        
-        # inside aggregate branch, before computing agg
-        if df[col].dtype.kind not in "biufc":  # bool,int,unsigned,float,complex
-            # attempt safe coercion
+        agg = plan.get("agg", "sum")
+        if agg not in _ALLOWED_AGGS:
+            raise ValueError(f"Aggregation '{agg}' is not allowed.")
+        group_by = plan.get("group_by") or []
+
+        # numeric coercion
+        if df[col].dtype.kind not in "biufc":
             coerced = pd.to_numeric(df[col], errors="coerce")
             if coerced.notna().sum() == 0:
                 raise ValueError(f"Column '{col}' is not numeric and cannot be coerced.")
             df = df.copy()
             df[col] = coerced
 
-        agg = plan.get("agg", "sum")
-        if agg not in _ALLOWED_AGGS:
-            raise ValueError(f"Aggregation '{agg}' is not allowed.")
-        group_by = plan.get("group_by") or []
         for g in group_by:
             _ensure_col(g, cols)
         if group_by:
